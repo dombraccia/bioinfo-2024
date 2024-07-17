@@ -1,0 +1,59 @@
+---
+title: "Bioinformatics Analysis Tutorial 2024"
+format: html
+---
+
+# Introduction
+
+This tutorial demonstrates a basic bioinformatics analysis pipeline using the PBMC 68k dataset. We will cover quality control, normalization, dimensionality reduction, and UMAP projections.
+
+# Setup
+
+First, load the necessary libraries and the dataset.
+
+```{r}
+library(Seurat)
+library(dplyr)
+library(ggplot2)
+
+# Load the PBMC dataset
+pbmc.data <- Read10X(data.dir = "path/to/your/data/")
+```
+
+Quality Control
+Filter out cells with extreme counts.
+
+```{r}
+pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc68k", min.cells = 3, min.features = 200)
+pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+```
+
+Normalization
+Normalize the data to make downstream analysis more robust.
+
+```{r}
+pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 10000)
+```
+
+
+Dimensionality Reduction
+Perform PCA on the normalized data.
+
+```{r}
+pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
+pbmc <- ScaleData(pbmc, features = rownames(pbmc))
+pbmc <- RunPCA(pbmc, features = VariableFeatures(object = pbmc))
+```
+
+UMAP Projections
+Visualize the data in two dimensions using UMAP.
+
+```{r}
+pbmc <- RunUMAP(pbmc, dims = 1:10)
+DimPlot(pbmc, reduction = "umap")
+```
+
+Conclusion
+This tutorial provided a brief overview of conducting a bioinformatics analysis with the PBMC 68k dataset. The steps included quality control, normalization, dimensionality reduction, and visualization with UMAP.
+
+```
