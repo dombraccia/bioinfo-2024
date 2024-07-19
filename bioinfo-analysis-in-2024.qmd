@@ -1,59 +1,88 @@
 ---
-title: "Bioinformatics Analysis Tutorial 2024"
-format: html
+title: "Rendering a Quarto Document"
+date: 2024-01-01
 ---
 
-# Introduction
+Horray! Hopefully you are reading this from a rendered Quarto document.
 
-This tutorial demonstrates a basic bioinformatics analysis pipeline using the PBMC 68k dataset. We will cover quality control, normalization, dimensionality reduction, and UMAP projections.
+The code below is the beginning of the [Scanpy tutorial](https://scanpy-tutorials.readthedocs.io/en/latest/pbmc3k.html) for preprocessing and clustering scRNA-seq data.
 
-# Setup
+## Preprocessing and clustering
 
-First, load the necessary libraries and the dataset.
+```{python}
+# Core scverse libraries
+import scanpy as sc
+import anndata as ad
 
-```{r}
-library(Seurat)
-library(dplyr)
-library(ggplot2)
-
-# Load the PBMC dataset
-pbmc.data <- Read10X(data.dir = "path/to/your/data/")
+# Data retrieval
+import pooch
 ```
 
-Quality Control
-Filter out cells with extreme counts.
-
-```{r}
-pbmc <- CreateSeuratObject(counts = pbmc.data, project = "pbmc68k", min.cells = 3, min.features = 200)
-pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500 & percent.mt < 5)
+```{python}
+sc.settings.set_figure_params(dpi=50, facecolor="white")
 ```
 
-Normalization
-Normalize the data to make downstream analysis more robust.
+The data used in this basic preprocessing and clustering tutorial was collected from bone marrow mononuclear cells of healthy human donors and was part of openproblem’s NeurIPS 2021 benchmarking dataset [Luecken et al., 2021]. The samples used in this tutorial were measured using the 10X Multiome Gene Expression and Chromatin Accessability kit.
 
-```{r}
-pbmc <- NormalizeData(pbmc, normalization.method = "LogNormalize", scale.factor = 10000)
+We are reading in the count matrix into an AnnData object, which holds many slots for annotations and different representations of the data.
+
+```{python}
+EXAMPLE_DATA = pooch.create(
+    path=pooch.os_cache("scverse_tutorials"),
+    base_url="doi:10.6084/m9.figshare.22716739.v1/",
+)
+EXAMPLE_DATA.load_registry_from_doi()
 ```
 
+```{python}
+samples = {
+    "s1d1": "s1d1_filtered_feature_bc_matrix.h5",
+    "s1d3": "s1d3_filtered_feature_bc_matrix.h5",
+}
+adatas = {}
 
-Dimensionality Reduction
-Perform PCA on the normalized data.
+for sample_id, filename in samples.items():
+    path = EXAMPLE_DATA.fetch(filename)
+    sample_adata = sc.read_10x_h5(path)
+    sample_adata.var_names_make_unique()
+    adatas[sample_id] = sample_adata
 
-```{r}
-pbmc <- FindVariableFeatures(pbmc, selection.method = "vst", nfeatures = 2000)
-pbmc <- ScaleData(pbmc, features = rownames(pbmc))
-pbmc <- RunPCA(pbmc, features = VariableFeatures(object = pbmc))
+adata = ad.concat(adatas, label="sample")
+adata.obs_names_make_unique()
+print(adata.obs["sample"].value_counts())
+adata
 ```
 
-UMAP Projections
-Visualize the data in two dimensions using UMAP.
+The data contains ~8,000 cells per sample and 36,601 measured genes. We’ll now investigate these with a basic preprocessing and clustering workflow.
 
-```{r}
-pbmc <- RunUMAP(pbmc, dims = 1:10)
-DimPlot(pbmc, reduction = "umap")
+## Quality Control
+
+The scanpy function calculate_qc_metrics() calculates common quality control (QC) metrics, which are largely based on calculateQCMetrics from scater [McCarthy et al., 2017]. One can pass specific gene population to calculate_qc_metrics() in order to calculate proportions of counts for these populations. Mitochondrial, ribosomal and hemoglobin genes are defined by distinct prefixes as listed below.
+
+```{python}
+# mitochondrial genes, "MT-" for human, "Mt-" for mouse
+adata.var["mt"] = adata.var_names.str.startswith("MT-")
+# ribosomal genes
+adata.var["ribo"] = adata.var_names.str.startswith(("RPS", "RPL"))
+# hemoglobin genes
+adata.var["hb"] = adata.var_names.str.contains("^HB[^(P)]")
+
+sc.pp.calculate_qc_metrics(
+    adata, qc_vars=["mt", "ribo", "hb"], inplace=True, log1p=True
+)
 ```
 
-Conclusion
-This tutorial provided a brief overview of conducting a bioinformatics analysis with the PBMC 68k dataset. The steps included quality control, normalization, dimensionality reduction, and visualization with UMAP.
+One can now inspect violin plots of some of the computed QC metrics:
 
+* the number of genes expressed in the count matrix
+* the total counts per cell
+* the percentage of counts in mitochondrial genes
+
+```{python}
+sc.pl.violin(
+    adata,
+    ["n_genes_by_counts", "total_counts", "pct_counts_mt"],
+    jitter=0.4,
+    multi_panel=True,
+)
 ```

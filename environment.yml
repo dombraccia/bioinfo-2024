@@ -1,14 +1,15 @@
-name: bioinfo-2024
+name: bioinfo2
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
-  - r-base=4.1.0
-  - pandoc>=3.1.12.3,<3.1.13.0a0
-  - quarto=1.4.557
-  # Specify individual R packages you need, for example:
-  - r-dplyr
-  - r-ggplot2
-  - r-seurat
-  # Add other dependencies here
+  - pandas
+  - numpy
+  - jupyter
+  - scipy
+  - matplotlib
+  - seaborn
+  - scanpy
+  - anndata
+  - pooch
