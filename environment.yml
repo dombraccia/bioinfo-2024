@@ -1,4 +1,4 @@
-name: bioinfo2
+name: bioinfo-2024
 channels:
   - conda-forge
   - bioconda
