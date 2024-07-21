@@ -1,11 +1,10 @@
-name: bioinfo-2024
+name: bioinfo
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
   - pandas
-  - numpy
   - jupyter
   - scipy
   - matplotlib
